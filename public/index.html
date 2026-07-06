@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reel — AI Video Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --charcoal: #14120F;
+    --charcoal-raised: #1C1A16;
+    --amber: #E8A33D;
+    --teal: #2B6E63;
+    --bone: #F1ECE3;
+    --bone-dim: #B8B2A5;
+    --rec: #C4432B;
+    --sprocket: #2A2822;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--charcoal);
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 720px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--sprocket);
+    padding-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 2rem;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--bone-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .field {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bone-dim);
+    margin-bottom: 8px;
+  }
+
+  textarea, select, input[type="text"] {
+    width: 100%;
+    background: var(--charcoal-raised);
+    border: 1px solid var(--sprocket);
+    color: var(--bone);
+    border-radius: 4px;
+    padding: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    resize: vertical;
+  }
+
+  textarea:focus, select:focus, input:focus {
+    outline: 2px solid var(--amber);
+    outline-offset: 1px;
+  }
+
+  textarea { min-height: 90px; }
+
+  .row {
+    display: flex;
+    gap: 16px;
+  }
+  .row .field { flex: 1; }
+
+  button {
+    width: 100%;
+    background: var(--amber);
+    color: var(--charcoal);
+    border: none;
+    border-radius: 4px;
+    padding: 16px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.2s ease;
+  }
+
+  button:hover:not(:disabled) { background: #f0b458; }
+  button:active:not(:disabled) { transform: scale(0.99); }
+  button:disabled {
+    background: var(--sprocket);
+    color: var(--bone-dim);
+    cursor: not-allowed;
+  }
+
+  .frame {
+    margin-top: 28px;
+    background: var(--charcoal-raised);
+    border-radius: 6px;
+    padding: 10px;
+    position: relative;
+    display: none;
+  }
+
+  .frame.visible { display: block; }
+
+  .sprockets {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    padding: 12px 0;
+  }
+  .sprockets.left { left: 0; }
+  .sprockets.right { right: 0; }
+  .sprockets span {
+    width: 8px; height: 8px;
+    background: var(--charcoal);
+    border-radius: 2px;
+  }
+
+  .screen {
+    margin: 0 30px;
+    background: #000;
+    border-radius: 3px;
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  video { width: 100%; display: block; }
+
+  .status-line {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--bone-dim);
+    padding: 0 30px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--rec);
+  }
+  .dot.pulsing { animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+
+  .counter {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .error-box {
+    margin-top: 20px;
+    padding: 14px;
+    background: rgba(196, 67, 43, 0.1);
+    border: 1px solid var(--rec);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: #e5a190;
+    display: none;
+  }
+  .error-box.visible { display: block; }
+
+  .download-link {
+    display: inline-block;
+    margin-top: 14px;
+    margin-left: 30px;
+    color: var(--teal);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    text-decoration: none;
+    border-bottom: 1px solid var(--teal);
+  }
+
+  footer {
+    margin-top: 24px;
+    font-size: 0.75rem;
+    color: var(--bone-dim);
+    text-align: center;
+  }
+  footer a { color: var(--bone-dim); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Reel</h1>
+      <span class="tag">Text → Motion</span>
+    </header>
+
+    <div class="field">
+      <label for="prompt">Describe your shot</label>
+      <textarea id="prompt" placeholder="A lone lighthouse at dusk, waves crashing, storm clouds rolling in over the water"></textarea>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="duration">Duration (sec)</label>
+        <select id="duration">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="aspect">Aspect ratio</label>
+        <select id="aspect">
+          <option value="16:9" selected>16:9 (widescreen)</option>
+          <option value="9:16">9:16 (vertical)</option>
+          <option value="1:1">1:1 (square)</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="generateBtn">Generate video</button>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="frame" id="frame">
+      <div class="sprockets left">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="sprockets right">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="screen" id="screen">
+        <span style="color:#555; font-family:'Space Mono', monospace; font-size:0.8rem;">awaiting first frame…</span>
+      </div>
+    </div>
+    <div class="status-line" id="statusLine" style="display:none;">
+      <span class="dot pulsing" id="statusDot"></span>
+      <span id="statusText">queued</span>
+      <span class="counter" id="counter">00:00</span>
+    </div>
+    <a href="#" class="download-link" id="downloadLink" style="display:none;" download>↓ download video</a>
+
+    <footer>Powered by your Replicate API key · runs entirely on your own server</footer>
+  </div>
+
+<script>
+const generateBtn = document.getElementById('generateBtn');
+const promptEl = document.getElementById('prompt');
+const durationEl = document.getElementById('duration');
+const aspectEl = document.getElementById('aspect');
+const frame = document.getElementById('frame');
+const screen = document.getElementById('screen');
+const statusLine = document.getElementById('statusLine');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const counterEl = document.getElementById('counter');
+const errorBox = document.getElementById('errorBox');
+const downloadLink = document.getElementById('downloadLink');
+
+let timerInterval = null;
+let seconds = 0;
+
+function startTimer() {
+  seconds = 0;
+  counterEl.textContent = '00:00';
+  timerInterval = setInterval(() => {
+    seconds += 1;
+    const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const s = String(seconds % 60).padStart(2, '0');
+    counterEl.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+}
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add('visible');
+}
+
+function clearError() {
+  errorBox.classList.remove('visible');
+  errorBox.textContent = '';
+}
+
+async function poll(id) {
+  try {
+    const res = await fetch(`/api/status/${id}`);
+    const data = await res.json();
+
+    if (data.error) {
+      stopTimer();
+      statusDot.classList.remove('pulsing');
+      showError(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate video';
+      return;
+    }
+
+    statusText.textContent = data.status;
+
+    if (data.status === 'succeeded') {
+      stopTimer();
+      statusDot.classList.remove('pulsing');
+      const output = Array.isArray(data.output) ? data.output[0] : data.output;
+      screen.innerHTML = `<video src="${output}" controls autoplay loop></video>`;
+      downloadLink.href = output;
+      downloadLink.style.display = 'inline-block';
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate video';
+      return;
+    }
+
+    if (data.status === 'failed' || data.status === 'canceled') {
+      stopTimer();
+      statusDot.classList.remove('pulsing');
+      showError('Generation failed. Try adjusting your prompt.');
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate video';
+      return;
+    }
+
+    setTimeout(() => poll(id), 2500);
+  } catch (err) {
+    stopTimer();
+    showError('Lost connection while checking status.');
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generate video';
+  }
+}
+
+generateBtn.addEventListener('click', async () => {
+  const prompt = promptEl.value.trim();
+  if (!prompt) {
+    showError('Describe the shot you want first.');
+    return;
+  }
+
+  clearError();
+  frame.classList.add('visible');
+  statusLine.style.display = 'flex';
+  statusDot.classList.add('pulsing');
+  statusText.textContent = 'starting…';
+  downloadLink.style.display = 'none';
+  screen.innerHTML = '<span style="color:#555; font-family:\'Space Mono\', monospace; font-size:0.8rem;">rendering…</span>';
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Generating…';
+  startTimer();
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        duration: durationEl.value,
+        aspect_ratio: aspectEl.value,
+      }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      stopTimer();
+      statusDot.classList.remove('pulsing');
+      showError(data.error || 'Failed to start generation.');
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate video';
+      return;
+    }
+
+    if (data.status === 'succeeded' && data.output) {
+      stopTimer();
+      statusDot.classList.remove('pulsing');
+      const output = Array.isArray(data.output) ? data.output[0] : data.output;
+      screen.innerHTML = `<video src="${output}" controls autoplay loop></video>`;
+      downloadLink.href = output;
+      downloadLink.style.display = 'inline-block';
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generate video';
+      return;
+    }
+
+    poll(data.id);
+  } catch (err) {
+    stopTimer();
+    statusDot.classList.remove('pulsing');
+    showError('Could not reach the server. Is it running?');
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generate video';
+  }
+});
+</script>
+</body>
+</html>
